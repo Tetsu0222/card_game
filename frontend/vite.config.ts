@@ -9,5 +9,13 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    // /api へのリクエストは backend コンテナへ転送
+    // ブラウザは vite (5173) しか見えない = CORS 不要
+    proxy: {
+      '/api': {
+        target: 'http://backend:3001',
+        changeOrigin: true,
+      },
+    },
   },
 })
