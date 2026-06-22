@@ -29,8 +29,10 @@ export function Game() {
 
 function GameInner({ initial }: { initial: GameState }) {
   const [state, dispatch] = useReducer(gameReducer, initial)
+  // 攻撃者選択モード: 「この自分モンスターで攻撃する」を選んだ状態
+  // null 時は通常表示、設定済み時は相手フィールドがターゲット選択可になる
+  const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(null)
 
-  // ログを末尾までスクロール
   const logRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
@@ -38,11 +40,15 @@ function GameInner({ initial }: { initial: GameState }) {
 
   const canDraw = state.phase === 'draw' && state.winner === null
   const canSummon = state.phase === 'main' && state.winner === null
-  // 先攻1ターン目はバトルフェイズに入っても攻撃不可
   const isFirstTurnGoingFirst = state.turn === 1 && state.activePlayer === 'self'
   const canAttack = state.phase === 'battle' && state.winner === null && !isFirstTurnGoingFirst
+  const opponentHasMonster = state.opponent.monsterZones.some((z) => z !== null)
 
-  // 手札のカード詳細をマスタから引いておく (再描画で都度引かない用)
+  // フェイズが変わったり決着したらターゲット選択モードを解除
+  useEffect(() => {
+    if (!canAttack) setSelectedAttackerId(null)
+  }, [canAttack])
+
   const handDetails = useMemo(
     () =>
       state.self.hand.map((inst) => ({
@@ -52,11 +58,38 @@ function GameInner({ initial }: { initial: GameState }) {
     [state.self.hand, state.cardMaster, state],
   )
 
+  // 自分モンスターの「攻撃」ボタン押下時の処理
+  // 相手モンスターがいなければ直接攻撃を即発行
+  // いれば「攻撃者選択モード」に入って、相手モンスタークリック待ち
+  const handleAttackClick = (attackerId: string) => {
+    if (!opponentHasMonster) {
+      dispatch({ type: 'ATTACK_DIRECT', instanceId: attackerId })
+      return
+    }
+    setSelectedAttackerId(attackerId)
+  }
+
+  // 相手モンスター選択時: 攻撃を実行
+  const handleTargetClick = (targetId: string) => {
+    if (selectedAttackerId === null) return
+    dispatch({
+      type: 'ATTACK_MONSTER',
+      attackerInstanceId: selectedAttackerId,
+      targetInstanceId: targetId,
+    })
+    setSelectedAttackerId(null)
+  }
+
   return (
     <div className="game">
       {/* 相手側 */}
       <PlayerHeader name={state.opponent.name} lp={state.opponent.lp} />
-      <FieldRow zones={state.opponent.monsterZones} cardMaster={state.cardMaster} />
+      <FieldRow
+        zones={state.opponent.monsterZones}
+        cardMaster={state.cardMaster}
+        targetable={selectedAttackerId !== null}
+        onTargetClick={handleTargetClick}
+      />
 
       <hr className="midline" />
 
@@ -64,7 +97,9 @@ function GameInner({ initial }: { initial: GameState }) {
       <FieldRow
         zones={state.self.monsterZones}
         cardMaster={state.cardMaster}
-        onAttack={canAttack ? (id) => dispatch({ type: 'ATTACK_DIRECT', instanceId: id }) : undefined}
+        onAttack={canAttack ? handleAttackClick : undefined}
+        attackingInstanceId={selectedAttackerId}
+        attackButtonLabel={opponentHasMonster ? '攻撃' : '直接攻撃'}
       />
       <PlayerHeader name={state.self.name} lp={state.self.lp} />
 
@@ -74,6 +109,9 @@ function GameInner({ initial }: { initial: GameState }) {
           ターン: {state.turn} / フェイズ: <strong>{state.phase}</strong>
           {isFirstTurnGoingFirst && state.phase === 'battle' && (
             <span className="note"> / 先攻1ターン目は攻撃不可</span>
+          )}
+          {selectedAttackerId !== null && (
+            <span className="note"> / ターゲットを選んでください</span>
           )}
           {state.winner !== null && (
             <span className="winner">
@@ -89,6 +127,9 @@ function GameInner({ initial }: { initial: GameState }) {
           <button onClick={() => dispatch({ type: 'ADVANCE_PHASE' })} disabled={state.winner !== null}>
             次のフェイズへ
           </button>
+          {selectedAttackerId !== null && (
+            <button onClick={() => setSelectedAttackerId(null)}>選択解除</button>
+          )}
         </div>
       </div>
 
@@ -146,10 +187,21 @@ function FieldRow({
   zones,
   cardMaster,
   onAttack,
+  attackingInstanceId,
+  attackButtonLabel,
+  targetable,
+  onTargetClick,
 }: {
   zones: readonly (MonsterOnField | null)[]
   cardMaster: ReadonlyMap<number, Card>
+  // 自分フィールド用: 攻撃ボタン押下時のコールバック
   onAttack?: (instanceId: string) => void
+  // 現在攻撃者として選ばれているインスタンスID (ハイライト用)
+  attackingInstanceId?: string | null
+  attackButtonLabel?: string
+  // 相手フィールド用: ターゲット選択可能か / クリック時のコールバック
+  targetable?: boolean
+  onTargetClick?: (instanceId: string) => void
 }) {
   return (
     <ul className="field-row">
@@ -166,16 +218,36 @@ function FieldRow({
           : m.summonedThisTurn
             ? '召喚酔い'
             : null
+        const isAttacking = attackingInstanceId === m.instanceId
+        const isTargetable = targetable === true && onTargetClick !== undefined
+        const liClass = [
+          'zone',
+          'occupied',
+          isAttacking ? 'attacking' : '',
+          isTargetable ? 'targetable' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
         return (
-          <li key={i} className="zone occupied">
+          <li
+            key={i}
+            className={liClass}
+            onClick={isTargetable ? () => onTargetClick!(m.instanceId) : undefined}
+            role={isTargetable ? 'button' : undefined}
+          >
             <div className="name">{card.name}</div>
-            <div className="atk">ATK {card.attack}</div>
+            <div className="atk">
+              ATK {card.attack} / DEF {card.defense}
+            </div>
             {onAttack && (
               <button
-                onClick={() => onAttack(m.instanceId)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAttack(m.instanceId)
+                }}
                 disabled={cannotAttackReason !== null}
               >
-                {cannotAttackReason ?? '直接攻撃'}
+                {cannotAttackReason ?? (attackButtonLabel ?? '攻撃')}
               </button>
             )}
           </li>

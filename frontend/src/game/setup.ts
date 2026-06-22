@@ -1,9 +1,10 @@
-import type { Card } from '../types/card'
+import { isMonster, type Card } from '../types/card'
 import {
   INITIAL_HAND_SIZE,
   createInitialGameState,
   type CardInstance,
   type GameState,
+  type MonsterOnField,
   type PlayerState,
 } from '../types/game'
 
@@ -46,13 +47,32 @@ function drawInitialHand(player: PlayerState, count: number): PlayerState {
   return { ...player, hand, deck }
 }
 
+// 開発用: 相手フィールドの先頭2ゾーンにテストモンスターを配置する
+// CPU 行動が未実装な間の動作確認用。CPU 実装時に削除する想定。
+// 候補から「適当に弱め/強めの2体」を拾って、戦闘ロジックの両ケースを試せるようにする
+function seedOpponentField(allCards: readonly Card[]): MonsterOnField[] {
+  const monsters = allCards.filter(isMonster)
+  // ATK昇順で並べ、弱い側と強い側を1体ずつ
+  const sorted = [...monsters].sort((a, b) => a.attack - b.attack)
+  const picks = [sorted[0], sorted[sorted.length - 1]].filter(
+    (c): c is NonNullable<typeof c> => c !== undefined,
+  )
+  return picks.map((card) => ({
+    instanceId: nextInstanceId(),
+    cardId: card.id,
+    position: 'face_up_attack',
+    hasAttackedThisTurn: false,
+    summonedThisTurn: false,
+  }))
+}
+
 // ============================================================
 // エントリーポイント
 // ============================================================
 // API から得た全カードを元に、初期ゲーム状態を作る
 //   - cardMaster: id→Card の Map
 //   - self: デッキ構築 + 初期手札ドロー済み
-//   - opponent: 空のまま (今回スコープでは戦闘しない)
+//   - opponent: 動作確認用のモンスターを2体配置 (CPU実装で置き換え予定)
 export function setupGame(allCards: readonly Card[]): GameState {
   const cardMaster = new Map<number, Card>(allCards.map((c) => [c.id, c]))
   const base = createInitialGameState(cardMaster)
@@ -61,9 +81,18 @@ export function setupGame(allCards: readonly Card[]): GameState {
   const selfWithDeck: PlayerState = { ...base.self, deck }
   const self = drawInitialHand(selfWithDeck, INITIAL_HAND_SIZE)
 
+  // 相手フィールドの先頭2ゾーンにテスト用モンスターを置く
+  const seeded = seedOpponentField(allCards)
+  const opponentZones = base.opponent.monsterZones.slice()
+  seeded.forEach((m, i) => {
+    opponentZones[i] = m
+  })
+  const opponent: PlayerState = { ...base.opponent, monsterZones: opponentZones }
+
   return {
     ...base,
     self,
+    opponent,
     log: [`ターン1 開始`, `初期手札 ${INITIAL_HAND_SIZE} 枚をドロー`],
   }
 }

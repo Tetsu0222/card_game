@@ -40,6 +40,9 @@
 }
 .zone.empty { color: #555; display: flex; align-items: center; justify-content: center; }
 .zone.occupied { background: #2c2c2c; }
+.zone.attacking { outline: 2px solid #fbbf24; }
+.zone.targetable { cursor: pointer; outline: 2px dashed #ef4444; }
+.zone.targetable:hover { background: #3c1f1f; }
 .zone .name { font-size: 0.85rem; font-weight: bold; }
 .zone .atk { color: #fca5a5; font-size: 0.8rem; margin: 0.25rem 0; }
 .zone button {
