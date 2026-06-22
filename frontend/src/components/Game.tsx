@@ -38,7 +38,9 @@ function GameInner({ initial }: { initial: GameState }) {
 
   const canDraw = state.phase === 'draw' && state.winner === null
   const canSummon = state.phase === 'main' && state.winner === null
-  const canAttack = state.phase === 'battle' && state.winner === null
+  // 先攻1ターン目はバトルフェイズに入っても攻撃不可
+  const isFirstTurnGoingFirst = state.turn === 1 && state.activePlayer === 'self'
+  const canAttack = state.phase === 'battle' && state.winner === null && !isFirstTurnGoingFirst
 
   // 手札のカード詳細をマスタから引いておく (再描画で都度引かない用)
   const handDetails = useMemo(
@@ -70,6 +72,9 @@ function GameInner({ initial }: { initial: GameState }) {
       <div className="controls">
         <div className="status">
           ターン: {state.turn} / フェイズ: <strong>{state.phase}</strong>
+          {isFirstTurnGoingFirst && state.phase === 'battle' && (
+            <span className="note"> / 先攻1ターン目は攻撃不可</span>
+          )}
           {state.winner !== null && (
             <span className="winner">
               {' '}
@@ -156,13 +161,21 @@ function FieldRow({
         if (!card || !isMonster(card)) {
           return <li key={i} className="zone">?</li>
         }
+        const cannotAttackReason = m.hasAttackedThisTurn
+          ? '攻撃済'
+          : m.summonedThisTurn
+            ? '召喚酔い'
+            : null
         return (
           <li key={i} className="zone occupied">
             <div className="name">{card.name}</div>
             <div className="atk">ATK {card.attack}</div>
             {onAttack && (
-              <button onClick={() => onAttack(m.instanceId)} disabled={m.hasAttackedThisTurn}>
-                {m.hasAttackedThisTurn ? '攻撃済' : '直接攻撃'}
+              <button
+                onClick={() => onAttack(m.instanceId)}
+                disabled={cannotAttackReason !== null}
+              >
+                {cannotAttackReason ?? '直接攻撃'}
               </button>
             )}
           </li>

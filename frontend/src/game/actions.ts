@@ -93,10 +93,15 @@ export function summonMonster(state: GameState, handInstanceId: string): GameSta
 
 // 直接攻撃: 相手フィールドが空のときだけ可能
 // 攻撃済み/召喚酔いのモンスターは攻撃不可
+// 先攻1ターン目は攻撃不可 (遊戯王の現代ルールに準拠)
 // LP 0 で勝利
 export function attackDirectly(state: GameState, fieldInstanceId: string): GameState {
   if (state.phase !== 'battle') {
     return appendLog(state, '攻撃失敗: バトルフェイズではありません')
+  }
+
+  if (state.turn === 1 && state.activePlayer === 'self') {
+    return appendLog(state, '攻撃失敗: 先攻1ターン目は攻撃できません')
   }
 
   const opponentHasMonster = state.opponent.monsterZones.some((z) => z !== null)
@@ -115,9 +120,7 @@ export function attackDirectly(state: GameState, fieldInstanceId: string): GameS
     return appendLog(state, '攻撃失敗: このモンスターはすでに攻撃済みです')
   }
   if (attacker.summonedThisTurn) {
-    // 初代DM1相当でも「召喚したターンに攻撃可」ではあるが、現代ルール
-    // (リンク召喚以前) に寄せて1ターンに1度の制限のみ採用 → ここは通す
-    // 召喚酔いを採用したい場合のフックとしてフラグ自体は残す
+    return appendLog(state, '攻撃失敗: 召喚したターンは攻撃できません (召喚酔い)')
   }
 
   const card = lookupCard(state, attacker)
