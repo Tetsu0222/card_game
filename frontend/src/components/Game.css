@@ -1,0 +1,97 @@
+.game {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: left;
+}
+
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: #1f2937;
+  border-radius: 6px;
+  margin: 0.25rem 0;
+}
+.player-header .name { font-weight: bold; }
+.player-header .lp { color: #fbbf24; }
+
+.midline {
+  border: none;
+  border-top: 2px dashed #555;
+  margin: 0.5rem 0;
+}
+
+.field-row {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+.zone {
+  min-height: 90px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.5rem;
+  text-align: center;
+  background: #1a1a1a;
+}
+.zone.empty { color: #555; display: flex; align-items: center; justify-content: center; }
+.zone.occupied { background: #2c2c2c; }
+.zone .name { font-size: 0.85rem; font-weight: bold; }
+.zone .atk { color: #fca5a5; font-size: 0.8rem; margin: 0.25rem 0; }
+.zone button {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+}
+.zone button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.controls {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #1f2937;
+  border-radius: 6px;
+}
+.controls .status { margin-bottom: 0.5rem; }
+.controls .winner { color: #fbbf24; font-weight: bold; }
+.controls .buttons button {
+  margin-right: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+.controls .buttons button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.hand {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+.hand-card {
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.5rem;
+  background: #2c2c2c;
+}
+.hand-card .name { font-weight: bold; margin-bottom: 0.25rem; }
+.hand-card .info { font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem; }
+.hand-card button { width: 100%; padding: 0.3rem; cursor: pointer; }
+
+.log {
+  margin-top: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  background: #111;
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: #d1d5db;
+}
+.log > div { padding: 0.1rem 0; }
+
+.error { color: #ff6b6b; }

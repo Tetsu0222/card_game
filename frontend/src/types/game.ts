@@ -81,6 +81,7 @@ export interface GameState {
   // 盤面側は cardId しか持たないので、表示時に lookup する想定
   readonly cardMaster: ReadonlyMap<number, Card>
   readonly winner: 'self' | 'opponent' | 'draw' | null  // 決着前は null
+  readonly log: readonly string[]                       // 画面に流す進行ログ (新しいものほど末尾)
 }
 
 // ============================================================
@@ -109,6 +110,7 @@ export function createInitialGameState(cardMaster: ReadonlyMap<number, Card>): G
     opponent: createEmptyPlayerState('CPU'),
     cardMaster,
     winner: null,
+    log: [],
   }
 }
 
