@@ -57,6 +57,7 @@
 }
 .controls .status { margin-bottom: 0.5rem; }
 .controls .winner { color: #fbbf24; font-weight: bold; }
+.controls .note { color: #9ca3af; font-size: 0.9rem; }
 .controls .buttons button {
   margin-right: 0.5rem;
   padding: 0.4rem 0.8rem;
